@@ -1,9 +1,9 @@
 import express from "express";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
-import goalRouter from "./router/goal-router.js";
+import { goalRouter } from "./router/goal-router.js";
+import { userRouter } from "./router/user-router.js";
 import errorHandler from "./middleware/error-middleware.js";
-import userRouter from "./router/user-router.js";
 
 const app = express();
 

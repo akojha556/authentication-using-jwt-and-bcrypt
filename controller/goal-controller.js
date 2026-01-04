@@ -1,11 +1,15 @@
 import expressAsyncHandler from "express-async-handler";
 import Goal from "../model/goal-model.js";
-import mongoose, { mongo } from "mongoose";
+import User from "../model/user-model.js";
+import mongoose from "mongoose";
 
 //Get goals
 export const getGoals = expressAsyncHandler(async (req, res) => {
-     const goals = await Goal.find();
-     res.status(200).json(goals);
+     const goals = await Goal.find({ user: req.user.id });
+     res.status(200).json({
+          message: "Goals by " + req.user.name,
+          goals
+     });
 });
 
 //Set goals
@@ -17,8 +21,14 @@ export const setGoals = expressAsyncHandler(async (req, res) => {
           throw new Error("Invalid Format");
      }
 
-     const goal = await Goal.create({ text: text });
-     res.status(201).json(goal);
+     const goal = await Goal.create({
+          user: req.user.id,
+          text: text
+     });
+     res.status(201).json({
+          message: "Goal created by " + req.user.name,
+          goal
+     });
 });
 
 //Update goals
@@ -30,13 +40,24 @@ export const updateGoals = expressAsyncHandler(async (req, res) => {
           throw new Error("The ID is invalid!");
      }
 
-     const updatedGoal = await Goal.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
+     //Find Goal
+     const goal = await Goal.findById(id);
 
-     if (!updatedGoal) {
+     if (!goal) {
           res.status(404);
           throw new Error("Goal not available");
      }
 
+     //Find user
+     const user = await User.findById(req.user.id);
+
+     //Verify User
+     if (user.id !== goal.user.toString()) {
+          res.status(401);
+          throw new Error("Unauthorised!");
+     }
+
+     const updatedGoal = await Goal.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
      res.status(200).json(updatedGoal);
 });
 
@@ -49,12 +70,18 @@ export const deleteGoals = expressAsyncHandler(async (req, res) => {
           throw new Error("The ID is invalid!");
      }
 
-     const deleteGoal = await Goal.findByIdAndDelete(id);
+     //Find goal
+     const goal = await Goal.findById(id);
 
-     if (!deleteGoal) {
-          res.status(404);
-          throw new Error("Goal not available");
+     //Find and verify user
+     const user = await User.findById(req.user.id);
+
+     if (goal.user.toString() !== user.id) {
+          res.status(401);
+          throw new Error("Unauthorised!");
      }
 
-     res.status(200).json(id);
+     await Goal.findByIdAndDelete(id);
+
+     res.status(200).json(`The goal contained ID ${id} is removed successfully.`);
 });

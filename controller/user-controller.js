@@ -1,38 +1,39 @@
-import bcrypt from "bcryptjs";
 import User from "../model/user-model.js";
-import expressAsyncHandler from "express-async-handler";
+import asyncHandler from "express-async-handler";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-//Register user
-export const registerUser = expressAsyncHandler(async (req, res) => {
+//Create user
+export const createUser = asyncHandler(async (req, res) => {
      const { name, email, password } = req.body || {};
 
-     //check if name, email and pw available or not
+     //Check if empty
      if (!name || !email || !password) {
           res.status(400);
-          throw new Error("Invalid user data");
-     };
+          throw new Error("The filed should not be empty.");
+     }
 
-     //check user already exists?
+     //Check user is already available?
      const user = await User.findOne({ email });
+
      if (user) {
           res.status(409);
-          throw new Error("User already exists");
-     };
+          throw new Error("User is aready available! try login!");
+     }
 
-     //Before creating user first hash the pw
+     //Hash the password using bcrypt
      const saltRounds = await bcrypt.genSalt(12);
      const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-     //Then creating new user with hashed password
+     //Creating User
      const newUser = await User.create({
           name,
           email,
-          password: hashedPassword
+          password: hashedPassword,
      });
 
      if (newUser) {
-          res.status(201).json({
+          res.status(200).json({
                _id: newUser.id,
                name: newUser.name,
                email: newUser.email,
@@ -40,48 +41,43 @@ export const registerUser = expressAsyncHandler(async (req, res) => {
           });
      } else {
           res.status(400);
-          throw new Error("Invalid user data.")
+          throw new Error("Invalid Data!");
      }
 });
 
 //Login user
-export const loginUser = expressAsyncHandler(async (req, res) => {
+export const loginUser = asyncHandler(async (req, res) => {
      const { email, password } = req.body || {};
 
-     //Check if email and pw available or not
+     //Validate field
      if (!email || !password) {
           res.status(400);
-          throw new Error("Invalid credentials");
-     };
+          throw new Error("The filed should not be empty.");
+     }
 
      const user = await User.findOne({ email });
 
-     if (user && (await bcrypt.compare(password, user.password))) {
-          res.status(200).json({
+     if (user && await (bcrypt.compare(password, user.password))) {
+          return res.status(200).json({
                _id: user.id,
                name: user.name,
                email: user.email,
                token: generateToken(user._id),
           });
      } else {
-          res.status(404);
-          throw new Error("invalid credentials");
-     };
+          res.status(400);
+          throw new Error("Invalid credentials!");
+     }
 });
 
-//Get me user
-export const getMe = expressAsyncHandler(async (req, res) => {
-     const { _id, name, email } = await User.findById(req.user.id);
-     res.status(200).json({
-          id: _id,
-          name,
-          email,
-     });
+//Get me
+export const getMe = asyncHandler(async (req, res) => {
+     res.status(200).json(req.user);
 });
 
-//Generate token
+//Generate Token
 const generateToken = (id) => {
      return jwt.sign({ id }, process.env.JWT_SECRET, {
-          expiresIn: "1h"
-     });
+          expiresIn: "1d"
+     })
 };
