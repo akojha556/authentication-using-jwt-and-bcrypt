@@ -70,6 +70,44 @@ export const loginUser = asyncHandler(async (req, res) => {
      }
 });
 
+//Changing the password 
+export const changePassword = asyncHandler(async (req, res) => {
+     const { currentPassword, newPassword } = req.body || {};
+
+     if(!currentPassword || !newPassword) {
+          res.status(400);
+          throw new Error("Fields should not be empty!");
+     }
+
+     //Check user authorization
+     const user = await User.findById(req.user.id);
+
+     if (!user) {
+          res.status(401);
+          throw new Error("Unauthorised Action!");
+     }
+
+     //check correct current password or not and update
+     if (user && await (bcrypt.compare(currentPassword, user.password))) {
+
+          //Hash the new password
+          const saltRounds = await bcrypt.genSalt(12);
+          const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+          const newUser = await User.findByIdAndUpdate(user.id, {
+               email: user.email,
+               password: hashedPassword
+          }, { new: true });
+
+          res.status(201).json({
+               message: "Your password updated successfully."
+          });
+     } else {
+          res.status(401);
+          throw new Error("Invalid Credentials! Try again.");
+     }
+});
+
 //Get me
 export const getMe = asyncHandler(async (req, res) => {
      res.status(200).json(req.user);
