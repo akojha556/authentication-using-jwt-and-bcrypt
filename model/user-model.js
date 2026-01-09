@@ -15,7 +15,12 @@ const userSchema = mongoose.Schema({
      password: {
           type: String,
           required: [true, "Please enter a valid password."]
-     }
+     },
+     resetToken: {
+          type: String,
+          required: true
+     },
+     resetTokenExpire: Date
 }, { timestamps: true });
 
 export default mongoose.model("User", userSchema);
